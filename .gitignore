@@ -1,0 +1,29 @@
+# Virtual environments
+myenv/
+venv/
+.env/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Test / coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Runtime-generated app data
+data/
+.vscode/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
