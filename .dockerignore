@@ -1,0 +1,8 @@
+myenv/
+.venv/
+data/
+.vscode/
+.git/
+__pycache__/
+*.py[cod]
+*.log

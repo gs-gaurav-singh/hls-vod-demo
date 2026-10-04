@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#172522" />
+  <title>Streamroom | HLS VOD</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #eef2ef;
+      --surface: #fbfcfa;
+      --ink: #172522;
+      --muted: #64716c;
+      --line: #d6ded9;
+      --green: #176b55;
+      --green-dark: #0e5142;
+      --lime: #d7f36b;
+      --coral: #e9795b;
+      --blue: #356d85;
+      --danger: #b53e37;
+      --radius: 5px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button, input { font: inherit; }
+
+    .topbar {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 5vw;
+      background: var(--ink);
+      color: #f6f8f5;
+    }
+
+    .brand, .top-meta, .local-state, .section-heading, .file-row, .status-line {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand { gap: 11px; font-weight: 700; letter-spacing: .06em; }
+
+    .brand-mark {
+      width: 25px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      background: var(--lime);
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .top-meta { gap: 22px; color: #b7c4bd; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    .local-state { gap: 8px; }
+    .state-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); }
+
+    main { width: min(1180px, 90vw); margin: 0 auto; padding: 38px 0 52px; }
+
+    .page-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 27px;
+    }
+
+    .eyebrow, .section-kicker {
+      margin: 0 0 7px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 0; font-size: clamp(27px, 4vw, 39px); line-height: 1.08; font-weight: 650; }
+
+    .session-tag {
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(285px, 350px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+    .ingest-panel { padding: 22px; }
+
+    .section-heading { justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+    .section-heading h2 { margin: 0; font-size: 15px; font-weight: 700; }
+    .step-count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+    .dropzone {
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      border: 1px dashed #9caaa2;
+      background: #f4f7f4;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease;
+    }
+
+    .dropzone:hover, .dropzone.is-over { border-color: var(--green); background: #edf5ef; }
+    .dropzone:focus-within { outline: 2px solid var(--green); outline-offset: 2px; }
+
+    .upload-glyph {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 13px;
+      border-radius: 50%;
+      background: var(--lime);
+      color: var(--ink);
+      font-size: 21px;
+      font-weight: 500;
+    }
+
+    .drop-title { margin: 0; font-weight: 700; }
+    .drop-note { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+    .dropzone input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+    .asset-lookup { margin-top: 19px; padding-top: 17px; border-top: 1px solid var(--line); }
+    .asset-lookup label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 700; }
+    .asset-lookup-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .asset-lookup input { width: 100%; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+    .asset-lookup input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
+    .asset-lookup .secondary-button { min-height: 40px; padding: 0 13px; }
+    .asset-lookup-note { margin: 6px 0 0; color: var(--muted); font-size: 11px; }
+
+    .file-row {
+      min-height: 54px;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 13px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .file-copy { min-width: 0; }
+    .file-name { overflow: hidden; margin: 0; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
+    .file-type { flex: none; padding: 4px 6px; background: #e5eeea; color: var(--green-dark); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+
+    .progress-wrap { margin-top: 16px; }
+    .progress-meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: var(--muted); font-size: 11px; }
+    progress { width: 100%; height: 5px; appearance: none; border: 0; background: #e3e9e5; }
+    progress::-webkit-progress-bar { background: #e3e9e5; }
+    progress::-webkit-progress-value { background: var(--green); }
+    progress::-moz-progress-bar { background: var(--green); }
+
+    .primary-button, .secondary-button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: background .16s ease, transform .16s ease;
+    }
+
+    .primary-button { width: 100%; margin-top: 17px; padding: 0 15px; background: var(--green); color: #fff; }
+    .primary-button:hover:not(:disabled) { background: var(--green-dark); }
+    .primary-button:active:not(:disabled) { transform: translateY(1px); }
+    .primary-button:disabled, .secondary-button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .steps { display: grid; gap: 0; margin: 22px 0 0; padding: 0; list-style: none; }
+    .steps li { position: relative; min-height: 35px; display: flex; align-items: center; gap: 10px; color: #87928d; font-size: 12px; }
+    .step-marker { width: 17px; height: 17px; display: grid; place-items: center; border: 1px solid #bdc8c1; border-radius: 50%; font-size: 9px; }
+    .steps li[data-state="active"] { color: var(--ink); font-weight: 700; }
+    .steps li[data-state="active"] .step-marker { border-color: var(--green); background: var(--green); color: white; }
+    .steps li[data-state="done"] { color: var(--green-dark); }
+    .steps li[data-state="done"] .step-marker { border-color: var(--green); background: var(--lime); color: var(--ink); }
+    .steps li[data-state="error"] { color: var(--danger); }
+    .steps li[data-state="error"] .step-marker { border-color: var(--danger); color: var(--danger); }
+
+    .status-line { min-height: 22px; gap: 7px; margin: 12px 0 0; color: var(--muted); font-size: 12px; }
+    .status-line[data-kind="error"] { color: var(--danger); }
+    .asset-id { margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+    .asset-id strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+
+    .monitor { overflow: hidden; }
+    .monitor-head { min-height: 57px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+    .monitor-title { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .monitor-led { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); }
+    .monitor-led.is-ready { background: var(--green); }
+    .secondary-button { min-height: 32px; padding: 0 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); font-size: 11px; }
+    .secondary-button:hover:not(:disabled) { background: #eef3ef; }
+
+    .screen {
+      position: relative;
+      display: grid;
+      min-height: 260px;
+      aspect-ratio: 16 / 9;
+      place-items: center;
+      overflow: hidden;
+      background: #172522;
+    }
+
+    video { display: block; width: 100%; height: 100%; max-height: 62vh; background: #101614; object-fit: contain; }
+    .screen-empty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; padding: 20px; color: #dce7df; text-align: center; pointer-events: none; }
+    .screen-empty[hidden] { display: none; }
+    .screen-stamp { width: 44px; height: 44px; display: grid; place-items: center; margin-bottom: 12px; border: 1px solid #80938a; color: var(--lime); font-size: 18px; }
+    .screen-empty p { margin: 0; font-size: 12px; }
+
+    .monitor-foot { display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px; color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+    .stream-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .error-detail { display: none; margin: 0 16px 15px; padding: 10px 12px; border-left: 3px solid var(--coral); background: #fff1ed; color: #74362b; font-size: 12px; overflow-wrap: anywhere; }
+    .error-detail.is-visible { display: block; }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 0 5vw; }
+      .top-meta { gap: 10px; }
+      .top-meta .edition { display: none; }
+      main { padding-top: 28px; }
+      .workspace { grid-template-columns: 1fr; }
+      .page-heading { align-items: start; }
+      .session-tag { margin-top: 3px; }
+      .screen { min-height: 210px; }
+    }
+
+    @media (max-width: 460px) {
+      .topbar { min-height: 52px; }
+      main { width: 92vw; }
+      .page-heading { flex-direction: column; gap: 10px; }
+      .ingest-panel { padding: 17px; }
+      .monitor-head { padding: 0 13px; }
+      .monitor-foot { padding: 10px 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">S</span><span>STREAMROOM</span></div>
+    <div class="top-meta"><span class="edition">VOD / HLS</span><span class="local-state"><span class="state-dot" aria-hidden="true"></span>Local workspace</span></div>
+  </header>
+
+  <main>
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Media pipeline / 01</p>
+        <h1>Create a stream</h1>
+      </div>
+      <div class="session-tag">H.264 · AAC · HLS</div>
+    </div>
+
+    <div class="workspace">
+      <section class="panel ingest-panel" aria-labelledby="source-title">
+        <div class="section-heading">
+          <h2 id="source-title">Source media</h2>
+          <span class="step-count" id="step-count">01 / 03</span>
+        </div>
+
+        <label class="dropzone" id="dropzone" for="file-input">
+          <span class="upload-glyph" aria-hidden="true">+</span>
+          <span class="drop-title">Choose a video file</span>
+          <span class="drop-note">MP4, MKV or MOV</span>
+          <input id="file-input" type="file" accept="video/mp4,video/x-matroska,video/quicktime,.mp4,.mkv,.mov" />
+        </label>
+
+        <form class="asset-lookup" id="asset-form">
+          <label for="asset-input">Replay an existing asset</label>
+          <div class="asset-lookup-controls">
+            <input id="asset-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste asset ID" aria-describedby="asset-lookup-note" />
+            <button class="secondary-button" id="replay-button" type="submit">Play</button>
+          </div>
+          <p class="asset-lookup-note" id="asset-lookup-note">Loads a previously packaged stream without uploading again.</p>
+        </form>
+
+        <div class="file-row" id="file-row" hidden>
+          <div class="file-copy">
+            <p class="file-name" id="file-name"></p>
+            <p class="file-size" id="file-size"></p>
+          </div>
+          <span class="file-type" id="file-type"></span>
+        </div>
+
+        <div class="progress-wrap" id="progress-wrap" hidden>
+          <div class="progress-meta"><span id="progress-label">Preparing upload</span><span id="progress-value">0%</span></div>
+          <progress id="upload-progress" max="100" value="0">0%</progress>
+        </div>
+
+        <button class="primary-button" id="start-button" type="button" disabled>Upload and package</button>
+
+        <ol class="steps" aria-label="Processing steps">
+          <li id="step-select" data-state="active"><span class="step-marker">1</span><span>Select source</span></li>
+          <li id="step-upload" data-state="pending"><span class="step-marker">2</span><span>Upload original</span></li>
+          <li id="step-package" data-state="pending"><span class="step-marker">3</span><span>Package HLS</span></li>
+        </ol>
+
+        <p class="status-line" id="status-line" role="status" aria-live="polite">Waiting for source media</p>
+        <div class="asset-id" id="asset-id" hidden><strong>Asset ID</strong><span id="asset-value"></span></div>
+      </section>
+
+      <section class="panel monitor" aria-labelledby="monitor-title">
+        <div class="monitor-head">
+          <div class="monitor-title"><span class="monitor-led" id="monitor-led" aria-hidden="true"></span><span id="monitor-title">Output monitor</span></div>
+          <button class="secondary-button" id="open-button" type="button" disabled>Open stream</button>
+        </div>
+        <div class="screen">
+          <video id="video" controls playsinline preload="metadata" aria-label="HLS video preview"></video>
+          <div class="screen-empty" id="screen-empty">
+            <span class="screen-stamp" aria-hidden="true">HLS</span>
+            <p>Preview appears when packaging is complete</p>
+          </div>
+        </div>
+        <div class="monitor-foot"><span>PLAYLIST</span><span class="stream-path" id="stream-path">No output selected</span></div>
+        <p class="error-detail" id="error-detail"></p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("file-input");
+    const dropzone = document.getElementById("dropzone");
+    const startButton = document.getElementById("start-button");
+    const assetForm = document.getElementById("asset-form");
+    const assetInput = document.getElementById("asset-input");
+    const replayButton = document.getElementById("replay-button");
+    const fileRow = document.getElementById("file-row");
+    const progressWrap = document.getElementById("progress-wrap");
+    const progressBar = document.getElementById("upload-progress");
+    const progressLabel = document.getElementById("progress-label");
+    const progressValue = document.getElementById("progress-value");
+    const statusLine = document.getElementById("status-line");
+    const errorDetail = document.getElementById("error-detail");
+    const video = document.getElementById("video");
+    const screenEmpty = document.getElementById("screen-empty");
+    const streamPath = document.getElementById("stream-path");
+    const openButton = document.getElementById("open-button");
+    const monitorLed = document.getElementById("monitor-led");
+    let selectedFile = null;
+    let activeHls = null;
+    let currentSource = null;
+    let busy = false;
+
+    function setStatus(message, kind = "") {
+      statusLine.textContent = message;
+      statusLine.dataset.kind = kind;
+      errorDetail.classList.toggle("is-visible", kind === "error");
+      if (kind !== "error") errorDetail.textContent = "";
+    }
+
+    function setStep(name, state) {
+      document.getElementById(`step-${name}`).dataset.state = state;
+      const order = ["select", "upload", "package"];
+      const index = order.indexOf(name);
+      document.getElementById("step-count").textContent = `${String(index + 1).padStart(2, "0")} / 03`;
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function chooseFile(file) {
+      if (!file || busy) return;
+      const allowed = /\.(mp4|mkv|mov)$/i.test(file.name);
+      if (!allowed) {
+        selectedFile = null;
+        fileRow.hidden = true;
+        startButton.disabled = true;
+        setStatus("Choose an MP4, MKV or MOV file", "error");
+        return;
+      }
+
+      selectedFile = file;
+      document.getElementById("file-name").textContent = file.name;
+      document.getElementById("file-size").textContent = formatBytes(file.size);
+      document.getElementById("file-type").textContent = file.name.split(".").pop();
+      fileRow.hidden = false;
+      startButton.disabled = false;
+      setStatus("Source ready to upload");
+      setStep("select", "active");
+      setStep("upload", "pending");
+      setStep("package", "pending");
+      errorDetail.classList.remove("is-visible");
+    }
+
+    function uploadFile(file) {
+      return new Promise((resolve, reject) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const request = new XMLHttpRequest();
+        request.open("POST", "/upload");
+        request.upload.addEventListener("progress", event => {
+          if (!event.lengthComputable) return;
+          const percent = Math.round((event.loaded / event.total) * 100);
+          progressBar.value = percent;
+          progressValue.textContent = `${percent}%`;
+          progressLabel.textContent = "Uploading original";
+        });
+        request.addEventListener("load", () => {
+          let result = {};
+          try { result = JSON.parse(request.responseText); } catch (_) { }
+          if (request.status >= 200 && request.status < 300) resolve(result);
+          else reject(new Error(result.detail || `Upload failed (${request.status})`));
+        });
+        request.addEventListener("error", () => reject(new Error("Could not reach the upload service")));
+        request.send(formData);
+      });
+    }
+
+    async function requestPackaging(assetId) {
+      const response = await fetch(`/package/${encodeURIComponent(assetId)}`, { method: "POST" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || `Could not start packaging (${response.status})`);
+      return result;
+    }
+
+    const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+    async function waitForPackaging(assetId) {
+      const statusUrl = `/hls/${encodeURIComponent(assetId)}/status.json`;
+      const deadline = Date.now() + 10 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await delay(1600);
+        const response = await fetch(`${statusUrl}?t=${Date.now()}`, { cache: "no-store" });
+        if (response.status === 404) continue;
+        if (!response.ok) throw new Error(`Could not read packaging status (${response.status})`);
+        const result = await response.json();
+        if (result.status === "done") return;
+        if (result.status === "failed") throw new Error(result.error || "FFmpeg packaging failed");
+        setStatus("Packaging HLS segments…");
+      }
+      throw new Error("Packaging is taking longer than expected. Check the server logs.");
+    }
+
+    async function playExistingAsset(assetId) {
+      const normalizedId = assetId.trim().toLowerCase();
+      if (!/^[a-f0-9]{32}$/.test(normalizedId)) {
+        throw new Error("Enter a valid 32-character asset ID.");
+      }
+
+      const statusResponse = await fetch(`/hls/${normalizedId}/status.json?t=${Date.now()}`, { cache: "no-store" });
+      if (statusResponse.status === 404) throw new Error("No packaged asset was found for that ID.");
+      if (!statusResponse.ok) throw new Error(`Could not read asset status (${statusResponse.status}).`);
+
+      const result = await statusResponse.json();
+      if (result.status === "running") throw new Error("This asset is still packaging. Try again shortly.");
+      if (result.status === "failed") throw new Error(result.error || "Packaging failed for this asset.");
+      if (result.status !== "done") throw new Error("This asset does not have a completed package.");
+
+      const source = `/hls/${normalizedId}/index.m3u8`;
+      const playlistResponse = await fetch(source, { method: "HEAD", cache: "no-store" });
+      if (!playlistResponse.ok) throw new Error("The saved playlist is missing for this asset.");
+
+      document.getElementById("asset-value").textContent = normalizedId;
+      document.getElementById("asset-id").hidden = false;
+      assetInput.value = normalizedId;
+      setStep("select", "done");
+      setStep("upload", "done");
+      setStep("package", "done");
+      loadStream(source, true);
+
+      const pageUrl = new URL(window.location.href);
+      pageUrl.search = "";
+      pageUrl.searchParams.set("asset_id", normalizedId);
+      history.replaceState(null, "", pageUrl);
+    }
+
+    function loadStream(source, autoplay = false) {
+      if (activeHls) {
+        activeHls.destroy();
+        activeHls = null;
+      }
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+      currentSource = source;
+      streamPath.textContent = source;
+      openButton.disabled = false;
+      screenEmpty.hidden = true;
+      monitorLed.classList.add("is-ready");
+
+      if (window.Hls && window.Hls.isSupported()) {
+        activeHls = new window.Hls();
+        activeHls.loadSource(source);
+        activeHls.attachMedia(video);
+        activeHls.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          if (autoplay) video.play().catch(() => setStatus("Stream ready. Press Play in the video controls."));
+        });
+        activeHls.on(window.Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) setStatus("Stream playback failed. Check the playlist and segments.", "error");
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = source;
+        if (autoplay) video.play().catch(() => setStatus("Stream ready. Press Play in the video controls."));
+      } else {
+        setStatus("HLS playback is not supported in this browser", "error");
+        screenEmpty.hidden = false;
+      }
+    }
+
+    fileInput.addEventListener("change", () => chooseFile(fileInput.files[0]));
+
+    assetForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (busy) return;
+
+      busy = true;
+      replayButton.disabled = true;
+      startButton.disabled = true;
+      errorDetail.classList.remove("is-visible");
+      setStatus("Looking up saved asset…");
+      try {
+        await playExistingAsset(assetInput.value);
+        setStatus("Saved stream loaded");
+      } catch (error) {
+        setStatus(error.message, "error");
+        errorDetail.textContent = error.message;
+      } finally {
+        busy = false;
+        replayButton.disabled = false;
+        startButton.disabled = !selectedFile;
+      }
+    });
+
+    for (const eventName of ["dragenter", "dragover"]) {
+      dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.add("is-over");
+      });
+    }
+
+    for (const eventName of ["dragleave", "drop"]) {
+      dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.remove("is-over");
+      });
+    }
+
+    dropzone.addEventListener("drop", event => chooseFile(event.dataTransfer.files[0]));
+
+    startButton.addEventListener("click", async () => {
+      if (!selectedFile || busy) return;
+      busy = true;
+      startButton.disabled = true;
+      replayButton.disabled = true;
+      progressWrap.hidden = false;
+      progressBar.value = 0;
+      progressValue.textContent = "0%";
+      errorDetail.classList.remove("is-visible");
+      setStep("select", "done");
+      setStep("upload", "active");
+      setStatus("Uploading source…");
+
+      try {
+        const uploaded = await uploadFile(selectedFile);
+        document.getElementById("asset-value").textContent = uploaded.asset_id;
+        document.getElementById("asset-id").hidden = false;
+        setStep("upload", "done");
+        setStep("package", "active");
+        progressLabel.textContent = "Upload complete";
+        setStatus("Starting HLS packaging…");
+
+        await requestPackaging(uploaded.asset_id);
+        await waitForPackaging(uploaded.asset_id);
+        const source = `/hls/${encodeURIComponent(uploaded.asset_id)}/index.m3u8`;
+        setStep("package", "done");
+        setStatus("Packaging complete · stream ready");
+        loadStream(source);
+      } catch (error) {
+        const failedStep = document.getElementById("step-package").dataset.state === "active" ? "package" : "upload";
+        setStep(failedStep, "error");
+        setStatus(error.message, "error");
+        errorDetail.textContent = error.message;
+      } finally {
+        busy = false;
+        startButton.disabled = !selectedFile;
+        replayButton.disabled = false;
+      }
+    });
+
+    openButton.addEventListener("click", () => {
+      if (currentSource) window.open(currentSource, "_blank", "noopener");
+    });
+
+    const pageParams = new URLSearchParams(window.location.search);
+    const initialAssetId = pageParams.get("asset_id");
+    const initialSource = pageParams.get("src");
+    if (initialAssetId) {
+      assetInput.value = initialAssetId;
+      assetForm.requestSubmit();
+    } else if (initialSource) {
+      loadStream(initialSource);
+      setStatus("Loaded stream from URL");
+    }
+  </script>
+</body>
+</html>
